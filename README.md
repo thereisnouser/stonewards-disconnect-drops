@@ -47,7 +47,7 @@ After a successful build, the installer removes the earlier `LeaveTomeDrop` and 
 
 ## 🔧 Compatibility & known limitations
 
-- **Source prototype v0.2.1.** The previous iteration was built from analyzed Stonewards methods, but this rename itself has **not been compiled or tested in multiplayer**.
+- **Unreleased prototype v0.1.0.** The previous iteration was built from analyzed Stonewards methods, but this rename itself has **not been compiled or tested in multiplayer**.
 - Items without a native `pickableItemPrefab` are deliberately retained in saved inventory rather than deleted.
 - Pickup spawning may not preserve slot-specific `fill` (charges/durability).
 - Team-wide tome effects may persist and stack if the dropped tome is picked up again.

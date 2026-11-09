@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>StonewardsDisconnectDrops</AssemblyName>
     <RootNamespace>StonewardsDisconnectDrops</RootNamespace>
-    <Version>0.2.1</Version>
+    <Version>0.1.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>

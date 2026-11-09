@@ -1,20 +1,13 @@
 # Changelog
 
-## 0.2.1 — Disconnect Drops
+## 0.1.0 — Unreleased
 
-- Renamed the project, assembly, BepInEx plugin ID, configuration file and install directory to **Disconnect Drops**.
-- Installer cleans up the previous Leave Loot Drop DLL and copies its configuration if needed.
-- No intentional gameplay changes.
+- Project renamed to **Disconnect Drops** before the first release.
+- Drop consumed pickup tomes when a player leaves, is kicked or disconnects (excluding level-up rings).
+- Drop supported inventory items, including equipped slots and stacks, when a player disconnects.
+- Drop inventory even if the player has not consumed any tomes.
+- Update saved loot after successful networked spawning to prevent duplication on reconnect.
+- Add `DropTomes`, `DropInventory`, and `ScatterRadius` configuration.
+- Installer removes old pre-release plugin DLLs and migrates previous configuration when appropriate.
 
-## 0.2.0 — Leave Loot Drop
-
-- Renamed the plugin, project, assembly, build script and configuration from Leave Tome Drop to Leave Loot Drop.
-- Added drop of all droppable inventory entries including equipped slots and stacks.
-- Saved inventory is updated only after successful networked spawning; rollback on removal failure.
-- Inventory drops even if the player has no consumed tomes.
-- Added separate `DropTomes` and `DropInventory` toggles.
-- Installer cleans up the previous DLL to avoid double-loaded mods.
-
-## 0.1.0 — Leave Tome Drop
-
-- Initial host-side drop of consumed pickup tomes on disconnect.
+No public release has been published yet.

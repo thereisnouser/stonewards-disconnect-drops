@@ -15,7 +15,7 @@ namespace StonewardsDisconnectDrops
     {
         public const string PluginGuid = "com.thereisnouser.stonewards.disconnectdrops";
         public const string PluginName = "Disconnect Drops";
-        public const string PluginVersion = "0.2.1";
+        public const string PluginVersion = "0.1.0";
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
