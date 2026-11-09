@@ -122,7 +122,7 @@ try {
         throw 'ZIP contents do not match the expected Thunderstore package.'
     }
     $readmeEntry = $check.GetEntry('README.md')
-    $reader = New-Object IO.StreamReader($readmeEntry.Open())
+    $reader = [IO.StreamReader]::new($readmeEntry.Open())
     try {
         if ($reader.ReadToEnd() -cne [IO.File]::ReadAllText((Join-Path $store 'README.md'))) {
             throw 'Packaged README differs from thunderstore/README.md.'
