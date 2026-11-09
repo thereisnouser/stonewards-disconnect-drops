@@ -59,7 +59,7 @@ namespace StonewardsLeaveTomeDrop
         }
     }
 
-    [HarmonyPatch(typeof(StoneWardsNetworkManager), nameof(StoneWardsNetworkManager.ClearAllRunData))]
+    [HarmonyPatch(typeof(StoneWardsNetworkManager), "ClearAllRunData")]
     internal static class RunClearedPatch
     {
         private static void Postfix()
