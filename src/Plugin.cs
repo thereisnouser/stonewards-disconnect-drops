@@ -8,14 +8,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace StonewardsLeaveLootDrop
+namespace StonewardsDisconnectDrops
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        public const string PluginGuid = "com.thereisnouser.stonewards.leavelootdrop";
-        public const string PluginName = "Leave Loot Drop";
-        public const string PluginVersion = "0.2.0";
+        public const string PluginGuid = "com.thereisnouser.stonewards.disconnectdrops";
+        public const string PluginName = "Disconnect Drops";
+        public const string PluginVersion = "0.2.1";
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — Disconnect Drops
+
+- Renamed the project, assembly, BepInEx plugin ID, configuration file and install directory to **Disconnect Drops**.
+- Installer cleans up the previous Leave Loot Drop DLL and copies its configuration if needed.
+- No intentional gameplay changes.
+
 ## 0.2.0 — Leave Loot Drop
 
 - Renamed the plugin, project, assembly, build script and configuration from Leave Tome Drop to Leave Loot Drop.
