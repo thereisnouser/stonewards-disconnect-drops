@@ -26,14 +26,14 @@ All settings are in the `General` section.
 
 ## 📦 Installation
 
-**Not published on Thunderstore yet.** After release, install using **r2modman** or another compatible Thunderstore mod manager on the host and launch Stonewards through that profile.
+Install using **r2modman** or another compatible Thunderstore mod manager on the host and launch Stonewards through that profile. BepInExPack is declared as a dependency.
 
 ## 🔧 Compatibility
 
 - **Game:** Stonewards. The supported build range has not yet been verified.
 - **Mod loader:** BepInEx 5 (Mono).
 - **Multiplayer:** Designed for host-only installation.
-- **Status:** Unreleased `0.1.0`. Tome drops have been observed working; the new inventory-drop behavior still requires multiplayer testing.
+- **Version:** `0.1.0`. Tome drops have been observed working; inventory-drop behavior still requires complete multiplayer testing.
 
 ## ⚠️ Known limitations
 

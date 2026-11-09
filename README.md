@@ -33,11 +33,11 @@ BepInEx creates the configuration after the plugin loads:
 
 ### Mod manager
 
-**Disconnect Drops has not been published to Thunderstore yet.** Once it is released, install it on the host through **r2modman** or another compatible Thunderstore mod manager and launch Stonewards from that profile.
+For the published package, install **Disconnect Drops** on the host using **r2modman** or another compatible Thunderstore mod manager, then launch Stonewards through that profile. Until the package is live, use **Build from source** below.
 
 ### Build from source
 
-For the current unreleased development build, you need the **.NET SDK**, an installed copy of **Stonewards**, and a **BepInEx 5** profile.
+To build locally, you need the **.NET SDK**, an installed copy of **Stonewards**, and a **BepInEx 5** profile.
 
 Clone the repository, open PowerShell in its root and specify your own paths:
 
@@ -61,7 +61,7 @@ It also removes old pre-release **Leave Tome Drop / Leave Loot Drop** plugin DLL
 - **Game:** Stonewards. A supported game build range has not been established.
 - **Mod loader:** BepInEx 5 (Mono).
 - **Multiplayer:** Host-side mod; designed to require installation on the host only.
-- **Release status:** `0.1.0` — unreleased development version. Tome drops have been observed working; the expanded inventory-drop behavior still needs a complete multiplayer test.
+- **Version:** `0.1.0` (first release). Tome drops have been observed working; expanded inventory drops still need a complete multiplayer test.
 
 ## ⚠️ Known limitations
 
@@ -80,6 +80,8 @@ The mod uses **Harmony** to intercept `StoneWardsNetworkManager.OnServerDisconne
 Tomes are selected from the player's saved `rogueUpgrades` with category `PICKUP`. Inventory entries are read from `InventorySystem`; supported items are spawned using the game's server-side pickup creation method, then removed from the original inventory to update save data. Failed drops are left in the saved state where possible.
 
 The `StonewardsDisconnectDrops.csproj` targets `netstandard2.1` and references assemblies from the local game and BepInEx installation. The build and installation commands are in the section above.
+
+For a release ZIP, run `package-thunderstore.ps1 -GameDir <game-path> -ProfileDir <profile-path>` from the project root. It builds the plugin and validates the icon, versions, dependency, README, and ZIP contents before writing `dist/DisconnectDrops-0.1.0.zip`. No upload or tag is created automatically.
 
 ## 🔗 Links
 

@@ -1,13 +1,11 @@
 # Changelog
 
-## 0.1.0 — Unreleased
+## 0.1.0 — First release
 
-- Project renamed to **Disconnect Drops** before the first release.
-- Drop consumed pickup tomes when a player leaves, is kicked or disconnects (excluding level-up rings).
-- Drop supported inventory items, including equipped slots and stacks, when a player disconnects.
-- Drop inventory even if the player has not consumed any tomes.
-- Update saved loot after successful networked spawning to prevent duplication on reconnect.
-- Add `DropTomes`, `DropInventory`, and `ScatterRadius` configuration.
-- Installer removes old pre-release plugin DLLs and migrates previous configuration when appropriate.
+- **Disconnect drops:** drop consumed pickup tomes when a player leaves, gets kicked, or disconnects during a level.
+- **Inventory recovery:** drop supported items from inventory slots, including equipped items and stacks, even when the player has no consumed tomes.
+- **Reconnect protection:** remove successfully dropped entries from saved run data to reduce duplication.
+- **Host controls:** add `Enabled`, `DropTomes`, `DropInventory`, and `ScatterRadius` settings.
+- **Package:** add Thunderstore manifest, icon, dedicated README and validated release packaging script.
 
-No public release has been published yet.
+**Testing note:** Tome drops have been observed working. Complete multiplayer testing of inventory drops, kick handling and reconnect protection remains outstanding.

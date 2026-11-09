@@ -1,0 +1,9 @@
+{
+  "name": "DisconnectDrops",
+  "version_number": "0.1.0",
+  "website_url": "https://github.com/thereisnouser/stonewards-disconnect-drops",
+  "description": "Drops consumed tomes and inventory when a player leaves, gets kicked, or disconnects in Stonewards.",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2305"
+  ]
+}
