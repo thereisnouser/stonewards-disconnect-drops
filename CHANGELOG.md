@@ -1,9 +1,14 @@
 # Changelog
 
-## 0.1.0 — prototype
+## 0.2.0 — Leave Loot Drop
 
-- Drop a disconnected player's saved pickup-tomes using Stonewards' own networked item prefab.
-- Leave rings untouched and remove only successfully spawned tomes from reconnect data.
-- Host-only Harmony patches, reset and rejoin guards.
+- Renamed the plugin, project, assembly, build script and configuration from Leave Tome Drop to Leave Loot Drop.
+- Added drop of all droppable inventory entries including equipped slots and stacks.
+- Saved inventory is updated only after successful networked spawning; rollback on removal failure.
+- Inventory drops even if the player has no consumed tomes.
+- Added separate `DropTomes` and `DropInventory` toggles.
+- Installer cleans up the previous DLL to avoid double-loaded mods.
 
-- Renamed project, assembly, BepInEx plugin, configuration and installation folder to **Leave Tome Drop** (no functional changes).
+## 0.1.0 — Leave Tome Drop
+
+- Initial host-side drop of consumed pickup tomes on disconnect.

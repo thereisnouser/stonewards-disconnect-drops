@@ -1,58 +1,57 @@
-# Leave Tome Drop (Stonewards)
+# Leave Loot Drop (Stonewards)
 
-**Drops consumed tomes when a player leaves, is kicked, or disconnects. Host-only.**
+**Drops consumed tomes and the entire droppable inventory when a player leaves, is kicked or disconnects.** Host-only BepInEx 5 mod.
 
 ## Features
 
-- Drops each **picked-up tome** once, including repeated upgrades, around the disconnected dwarf's last position.
-- Excludes **level-up rings** and other non-pickup upgrades.
-- Uses Stonewards' normal, networked tome pickup prefab so other players see and can collect the tomes.
-- Removes **successfully dropped** entries from that player's saved run data to prevent reconnect duplication. Entries that could not be spawned stay in the saved run data.
-- Does nothing in the Hub; protects against duplicate disconnect notifications and resets when a new run begins.
+- Drops every consumed **pickup tome**, excluding level-up rings.
+- Drops the entire server-side inventory, including equipped slots and item stacks, provided the item has a native pickup prefab.
+- Items drop near the departing dwarf and are collectible by teammates.
+- Removes only successfully spawned loot from the player's saved run data to prevent reconnect duplication.
+- Skips Hub and run transitions; guards against multiple disconnect callbacks.
+- **Host-only installation**; no client mod required.
 
-## Install / build (Windows)
+## Configuration
 
-Requires the **.NET SDK** and an existing **BepInEx 5** Stonewards profile. No game or proprietary DLLs are included.
-
-1. Clone the repository or download its ZIP.
-2. Open PowerShell in the project folder.
-3. Run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build-and-install.ps1 `
-  -GameDir 'F:\Steam\steamapps\common\Stonewards' `
-  -ProfileDir 'C:\Users\user\AppData\Roaming\r2modmanPlus-local\Stonewards\profiles\YOUR_PROFILE'
-```
-
-4. If you installed the earlier prototype, remove `BepInEx/plugins/thereisnouser-DropConsumedTomes` first; the old plugin can otherwise load alongside the renamed one.
-5. Start Stonewards through the profile. Only the **host** installs this mod.
-6. Have a second player pick up two tomes, disconnect or get kicked, then verify that two tomes appear. Rejoin and verify they are not restored again.
-
-### Configuration
-
-`BepInEx/config/com.thereisnouser.stonewards.leavetomedrop.cfg`
+File: `BepInEx/config/com.thereisnouser.stonewards.leavelootdrop.cfg`
 
 - `General.Enabled = true`
+- `General.DropTomes = true`
+- `General.DropInventory = true`
 - `General.ScatterRadius = 1.6` (metres, 0.25–4)
 
-### Development
+## Build and install
 
-- C# / netstandard2.1, Harmony, BepInEx 5, Mirror.
-- Stonewards references are supplied at build time from the installed game folder, and BepInEx references from the selected profile.
-- Patched host method: `StoneWardsNetworkManager.OnServerDisconnect` (**Prefix** before Mirror destroys the player), plus add-player/run-reset callbacks.
-- Authoritative saved list: `FirstPersonController.RunPlayerData.rogueUpgrades` (`RogueUpgradeData` has `upgradeID` and `rarity`).
-- Filters `UpgradeCategory.PICKUP`, intentionally **not** `LEVELUP` (rings).
-- Prefab lookup: `ItemManager.itemDataBase.items` → `PickupUpgradeItemDataSO` → `PickableUpgrade` prefab.
-- Drop order follows `TreasureChest.SpawnItem`: instantiate, `NetworkInit`, `SelectPickupUpgrade` with one-element pool, `NetworkServer.Spawn`.
+Requires .NET SDK, Stonewards and BepInEx 5 in the selected profile. No proprietary game DLLs are included.
 
-## Important limitations / status
+```powershell
+$repo = 'X:\projects\stonewards-leave-loot-drop'
+$game = 'F:\Steam\steamapps\common\Stonewards'
+$profile = "$env:APPDATA\r2modmanPlus-local\Stonewards\profiles\stonewards-test"
 
-- **Source-only prototype**. Method signatures and IL flow were verified against the user's `Assembly-CSharp.dll` dated 2026-11-06, but the mod **was not compiled or tested in-game** in this environment; a first multiplayer test is required.
-- Upgrades with **team-wide/server-wide** effects may persist after a player leaves in the unmodded game. The mod does not reverse already-applied effects. Re-picking such a tome **may stack the team-wide effect again**. This is a known gameplay caveat that needs an in-game test (or a follow-up targeted rollback).
-- The mod drops only tomes recorded in `RunPlayerData`; events not yet received by the host during a sudden network interruption cannot be recovered.
-- When the host quits the session altogether, ground loot cannot persist into a closed session.
-- Not yet checked against other mods that alter or share the saved upgrade list.
+powershell -ExecutionPolicy Bypass -File "$repo\build-and-install.ps1" `
+    -GameDir $game -ProfileDir $profile
+```
 
-## Version
+The installer puts `StonewardsLeaveLootDrop.dll` in `BepInEx/plugins/thereisnouser-LeaveLootDrop` and removes the old Leave Tome Drop DLL.
 
-- **0.1.0** — first host-side disconnect/drop implementation.
+## Technical details
+
+- Hooks `StoneWardsNetworkManager.OnServerDisconnect` before player destruction.
+- Tome data comes from `RunPlayerData.rogueUpgrades` filtered for `UpgradeCategory.PICKUP`.
+- Inventory comes from `FirstPersonController.InventorySystem.InventoryEntries` (all slots).
+- Uses `ItemManager.ServerInstantiatePickableItem` for networked world loot, then `InventorySystem.ServerRemoveItemFromSlot` to synchronize the saved inventory.
+- Rolls back the spawned pickup if the original inventory entry cannot be removed.
+
+## Known limitations / status
+
+- **Prototype v0.2.0**: method signatures checked against the user's 2026-11-06 Stonewards assembly; not compiled or tested in a multiplayer session yet.
+- Items without `pickableItemPrefab` cannot be safely dropped. Their saved entries are deliberately retained and a warning is logged. Some special or bound items may fall into this category.
+- Standard item drops may not preserve an item slot's `fill` state (charge/durability), matching the limitations of the native spawn method.
+- Teamwide tome bonuses may remain applied after the player leaves and stack if the tome is recollected.
+- Physically carried world objects outside the inventory aren't covered.
+- When the host ends the game session, ground loot does not persist.
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+*Made by thereisnouser*

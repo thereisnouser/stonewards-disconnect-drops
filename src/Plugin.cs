@@ -8,28 +8,34 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace StonewardsLeaveTomeDrop
+namespace StonewardsLeaveLootDrop
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        public const string PluginGuid = "com.thereisnouser.stonewards.leavetomedrop";
-        public const string PluginName = "Leave Tome Drop";
-        public const string PluginVersion = "0.1.0";
+        public const string PluginGuid = "com.thereisnouser.stonewards.leavelootdrop";
+        public const string PluginName = "Leave Loot Drop";
+        public const string PluginVersion = "0.2.0";
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
         internal static ConfigEntry<float> ScatterRadius;
+        internal static ConfigEntry<bool> DropTomes;
+        internal static ConfigEntry<bool> DropInventory;
         private Harmony _harmony;
 
         private void Awake()
         {
             Log = Logger;
             Enabled = Config.Bind("General", "Enabled", true,
-                "Drop consumed pickup tomes when a remote player disconnects or is kicked.");
+                "Drop picked-up tomes and inventory items when a player leaves, is kicked or disconnects.");
             ScatterRadius = Config.Bind("General", "ScatterRadius", 1.6f,
-                new ConfigDescription("Horizontal radius of dropped tomes in metres.",
+                new ConfigDescription("Horizontal radius of dropped loot in metres.",
                     new AcceptableValueRange<float>(0.25f, 4.0f)));
+            DropTomes = Config.Bind("General", "DropTomes", true,
+                "Drop books consumed from the current run; excludes level-up rings.");
+            DropInventory = Config.Bind("General", "DropInventory", true,
+                "Drop all inventory items, including equipped slots and stacks, on disconnect.");
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll(typeof(Plugin).Assembly);
             Logger.LogInfo(PluginName + " " + PluginVersion + " loaded (host-only).");
@@ -46,7 +52,7 @@ namespace StonewardsLeaveTomeDrop
     {
         private static void Prefix(StoneWardsNetworkManager __instance, NetworkConnectionToClient __0)
         {
-            TomeDropper.OnDisconnect(__instance, __0);
+            LootDropper.OnDisconnect(__instance, __0);
         }
     }
 
@@ -55,7 +61,7 @@ namespace StonewardsLeaveTomeDrop
     {
         private static void Postfix(NetworkConnectionToClient __0)
         {
-            TomeDropper.OnPlayerAdded(__0);
+            LootDropper.OnPlayerAdded(__0);
         }
     }
 
@@ -64,11 +70,11 @@ namespace StonewardsLeaveTomeDrop
     {
         private static void Postfix()
         {
-            TomeDropper.OnRunCleared();
+            LootDropper.OnRunCleared();
         }
     }
 
-    internal static class TomeDropper
+    internal static class LootDropper
     {
         // Prevents repeated disconnection callbacks from dropping the same player's books.
         private static readonly HashSet<ulong> ProcessedPlayers = new HashSet<ulong>();
@@ -94,7 +100,7 @@ namespace StonewardsLeaveTomeDrop
             if (!Plugin.Enabled.Value || !NetworkServer.active || manager == null || conn == null)
                 return;
 
-            // No book rain in the Hub or during normal end-of-run scene changes.
+            // Do not generate loot in the Hub or during normal end-of-run scene transitions.
             if (GameManager.Instance == null || GameManager.Instance.SceneType != GameSceneType.Level)
                 return;
 
@@ -106,59 +112,150 @@ namespace StonewardsLeaveTomeDrop
                 ulong playerId = player.playerID;
                 if (ProcessedPlayers.Contains(playerId)) return;
 
-                RunPlayerData record = player.RunPlayerData;
-                // The game stores this exact object inside the SaveManager dictionary.
-                if (record == null)
-                {
-                    var saveManager = Singleton<SaveManager>.Instance;
-                    var records = saveManager != null && saveManager.saveContainer != null
-                        ? saveManager.saveContainer.runPlayersData : null;
-                    if (records == null || !records.TryGetValue(playerId, out record)) return;
-                }
-                if (record.rogueUpgrades == null || record.rogueUpgrades.Count == 0) return;
-
-                var upgradeManager = RogueLikeUpgradeManager.Instance;
-                var itemData = GetTomeItemData();
-                if (upgradeManager == null || itemData == null)
-                {
-                    Plugin.Log.LogWarning("Cannot drop tomes: upgrade database or tome pickup prefab not found. Save data was not touched.");
-                    return;
-                }
-
-                // Each saved entry represents exactly one consumed upgrade, including stacks.
-                var tomes = new List<Tuple<RogueUpgradeData, RogueLikeUpgradeSO>>();
-                foreach (RogueUpgradeData entry in record.rogueUpgrades)
-                {
-                    if (entry == null || string.IsNullOrEmpty(entry.upgradeID)) continue;
-                    RogueLikeUpgradeSO upgrade = upgradeManager.GetUpgradeSOByID(entry.upgradeID);
-                    if (upgrade == null) continue;
-                    if (upgrade.UpgradeCategory != UpgradeCategory.PICKUP) continue;
-                    tomes.Add(Tuple.Create(entry, upgrade));
-                }
-                if (tomes.Count == 0) return;
-
+                // Mark before spawning to prevent duplicate disconnect callbacks.
                 ProcessedPlayers.Add(playerId);
                 Vector3 center = player.transform.position + Vector3.up * 0.9f;
-                int spawnedCount = 0;
-                for (int i = 0; i < tomes.Count; ++i)
-                {
-                    RogueUpgradeData entry = tomes[i].Item1;
-                    RogueLikeUpgradeSO upgrade = tomes[i].Item2;
-                    Vector3 position = Scatter(center, i);
-                    if (!SpawnTome(itemData, upgrade, position)) continue;
+                int scatterIndex = 0;
 
-                    // Commit only after the networked object was spawned.
-                    // Otherwise reconnect would restore the same tome and duplicate it.
-                    record.rogueUpgrades.Remove(entry);
-                    spawnedCount++;
-                }
-                Plugin.Log.LogInfo("Player " + playerId + " disconnected: dropped " + spawnedCount +
-                    "/" + tomes.Count + " consumed tomes (rings untouched).");
+                // Inventory and tome lists are independent; players without tomes
+                // must still drop everything they carry.
+                int stacksDropped = 0, itemsDropped = 0, tomesDropped = 0;
+                if (Plugin.DropInventory.Value)
+                    DropInventoryItems(player, center, ref scatterIndex, out stacksDropped, out itemsDropped);
+                if (Plugin.DropTomes.Value)
+                    tomesDropped = DropConsumedTomes(GetRunPlayerData(player), center, ref scatterIndex);
+                Plugin.Log.LogInfo("Player " + playerId + " disconnected: dropped " +
+                    tomesDropped + " consumed tomes and " + itemsDropped +
+                    " inventory items in " + stacksDropped + " pickups (rings untouched).");
             }
             catch (Exception e)
             {
                 // A disconnect must always be allowed to finish even if a mod fails.
-                Plugin.Log.LogError("Tome drop failed; vanilla disconnect continues. " + e);
+                Plugin.Log.LogError("Loot drop failed; vanilla disconnect continues. " + e);
+            }
+        }
+
+        private static RunPlayerData GetRunPlayerData(FirstPersonController player)
+        {
+            RunPlayerData record = player.RunPlayerData;
+            if (record != null) return record;
+            var saveManager = Singleton<SaveManager>.Instance;
+            var records = saveManager != null && saveManager.saveContainer != null
+                ? saveManager.saveContainer.runPlayersData : null;
+            if (records == null) return null;
+            records.TryGetValue(player.playerID, out record);
+            return record;
+        }
+
+        private static int DropConsumedTomes(RunPlayerData record, Vector3 center, ref int scatterIndex)
+        {
+            if (record == null || record.rogueUpgrades == null || record.rogueUpgrades.Count == 0)
+                return 0;
+            var manager = RogueLikeUpgradeManager.Instance;
+            var itemData = GetTomeItemData();
+            if (manager == null || itemData == null)
+            {
+                Plugin.Log.LogWarning("Cannot drop tomes: manager or pickup prefab unavailable. Saved tomes kept.");
+                return 0;
+            }
+
+            var tomes = new List<Tuple<RogueUpgradeData, RogueLikeUpgradeSO>>();
+            foreach (RogueUpgradeData entry in record.rogueUpgrades)
+            {
+                if (entry == null || string.IsNullOrEmpty(entry.upgradeID)) continue;
+                RogueLikeUpgradeSO upgrade = manager.GetUpgradeSOByID(entry.upgradeID);
+                if (upgrade != null && upgrade.UpgradeCategory == UpgradeCategory.PICKUP)
+                    tomes.Add(Tuple.Create(entry, upgrade));
+            }
+            int dropped = 0;
+            foreach (var pair in tomes)
+            {
+                if (!SpawnTome(itemData, pair.Item2, Scatter(center, scatterIndex++))) continue;
+                record.rogueUpgrades.Remove(pair.Item1);
+                dropped++;
+            }
+            return dropped;
+        }
+
+        private static void DropInventoryItems(FirstPersonController player, Vector3 center,
+            ref int scatterIndex, out int stacksDropped, out int itemsDropped)
+        {
+            stacksDropped = 0;
+            itemsDropped = 0;
+            InventorySystem inventory = player.InventorySystem;
+            ItemManager itemManager = ItemManager.Instance;
+            if (inventory == null || !inventory.isServer || itemManager == null)
+            {
+                Plugin.Log.LogWarning("Inventory unavailable on server at disconnect; saved items kept.");
+                return;
+            }
+
+            // ServerRemoveItemFromSlot calls UpdateSaveDataSlot, updating
+            // RunPlayerData.playersInventoryData before the player is destroyed.
+            for (int slot = 0; slot < inventory.InventoryEntries.Count; ++slot)
+            {
+                InventorySystem.InventoryEntry entry = inventory.InventoryEntries[slot];
+                if (entry.IsEmpty || string.IsNullOrEmpty(entry.itemID) || entry.count <= 0)
+                    continue;
+                ItemDataSO data = itemManager.GetItemDataSoByID(entry.itemID);
+                if (data == null || data.pickableItemPrefab == null)
+                {
+                    Plugin.Log.LogWarning("Item '" + entry.itemID + "' at slot " + slot +
+                        " has no pickup prefab; keeping saved inventory entry.");
+                    continue;
+                }
+
+                // Nonstackable items are forced to count 1 by PickableItem.NetworkInit.
+                // Spawn them separately so multiples are not lost.
+                int remaining = entry.count;
+                while (remaining > 0)
+                {
+                    int quantity = data.isStackable ? remaining : 1;
+                    PickableItem pickup = null;
+                    try
+                    {
+                        pickup = itemManager.ServerInstantiatePickableItem(
+                            entry.itemID, quantity, Scatter(center, scatterIndex++), true, true);
+                        if (pickup == null)
+                        {
+                            Plugin.Log.LogWarning("Failed spawning '" + entry.itemID +
+                                "' from slot " + slot + "; saved entry unchanged.");
+                            break;
+                        }
+                        if (!inventory.ServerRemoveItemFromSlot(slot, quantity))
+                        {
+                            DestroySpawnedPickup(pickup);
+                            Plugin.Log.LogWarning("Failed removing '" + entry.itemID +
+                                "' from slot " + slot + "; pickup rolled back.");
+                            break;
+                        }
+                        remaining -= quantity;
+                        itemsDropped += quantity;
+                        stacksDropped++;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (pickup != null) DestroySpawnedPickup(pickup);
+                        Plugin.Log.LogError("Failed dropping '" + entry.itemID + "': " + ex);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static void DestroySpawnedPickup(PickableItem pickup)
+        {
+            if (pickup == null) return;
+            try
+            {
+                if (pickup.netIdentity != null && pickup.netIdentity.netId != 0)
+                    NetworkServer.Destroy(pickup.gameObject);
+                else
+                    UnityEngine.Object.Destroy(pickup.gameObject);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogError("Failed to roll back an inventory pickup: " + ex);
             }
         }
 

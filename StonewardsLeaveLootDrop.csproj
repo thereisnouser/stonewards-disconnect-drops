@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>StonewardsLeaveTomeDrop</AssemblyName>
-    <RootNamespace>StonewardsLeaveTomeDrop</RootNamespace>
-    <Version>0.1.0</Version>
+    <AssemblyName>StonewardsLeaveLootDrop</AssemblyName>
+    <RootNamespace>StonewardsLeaveLootDrop</RootNamespace>
+    <Version>0.2.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
