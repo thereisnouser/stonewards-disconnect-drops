@@ -1,67 +1,90 @@
-# Disconnect Drops (Stonewards)
+# Stonewards Disconnect Drops
 
-**Drops consumed tomes and the entire droppable inventory when a player leaves, gets kicked, or disconnects.** Host-only BepInEx mod.
+**Automatically drops a departing player's consumed tomes and inventory so the rest of the party can recover their loot.** The mod runs on the host when a player leaves, is kicked, or loses their connection.
 
 ## ✨ Features
 
-- Drops every consumed **pickup tome**. Level-up rings are unaffected.
-- Drops the disconnecting player's **inventory**, including equipped slots and item stacks, for items with a native pickup prefab.
-- Dropped loot appears at the player's last position and is collectible by teammates.
-- Removes only successfully spawned loot from that player's saved run data to prevent duplicate restoration after reconnecting.
-- Ignores the Hub and run transitions; protects against duplicate disconnect processing.
-- **Host-only** installation; no client mod required.
+- **Consumed tome drops** — returns acquired pickup tomes to the world, including repeated upgrades. Level-up rings are not dropped.
+- **Inventory drops** — spawns standard pickup items from all inventory slots, including equipped items and stacks.
+- **Party recovery** — places networked loot near the disconnected player's last position for remaining players to collect.
+- **Reconnect protection** — removes successfully dropped items from the departing player's saved run data to avoid restoring them again on reconnect.
+- **Host-side controls** — enable or disable tome and inventory drops independently and adjust their scatter radius.
 
 ## 🎮 How to use
 
-Install on the host and start a run. When a remote player leaves, is kicked, or loses the connection, their saved pickup tomes and supported inventory items are dropped.
+Install the mod in the **host's** BepInEx profile and start a run. No buttons or in-game menu are needed.
+
+When another player leaves, gets kicked, or disconnects during a level, the host attempts to drop their consumed pickup tomes and inventory items near where they were standing. The mod does not drop loot in the Hub.
 
 ## ⚙️ Configuration
 
-File: `BepInEx/config/com.thereisnouser.stonewards.disconnectdrops.cfg`
+BepInEx creates the configuration after the plugin loads:
 
-- `General.Enabled = true`
-- `General.DropTomes = true`
-- `General.DropInventory = true`
-- `General.ScatterRadius = 1.6` (metres, 0.25–4)
+`BepInEx/config/com.thereisnouser.stonewards.disconnectdrops.cfg`
 
-The build script migrates the previous `leavelootdrop.cfg` configuration if the new file does not exist.
+| Setting | Default | Description |
+| --- | --- | --- |
+| `General.Enabled` | `true` | Enables disconnect drops. |
+| `General.DropTomes` | `true` | Drops consumed pickup tomes, not level-up rings. |
+| `General.DropInventory` | `true` | Drops supported items from the player's inventory. |
+| `General.ScatterRadius` | `1.6` | Loot scatter radius in metres (allowed: `0.25`–`4.0`). |
 
-## 📦 Installation / build from source
+## 📦 Installation
 
-Requires .NET SDK, the installed Stonewards game and a BepInEx 5 profile. Game binaries are not included.
+### Mod manager
+
+**Disconnect Drops has not been published to Thunderstore yet.** Once it is released, install it on the host through **r2modman** or another compatible Thunderstore mod manager and launch Stonewards from that profile.
+
+### Build from source
+
+For the current unreleased development build, you need the **.NET SDK**, an installed copy of **Stonewards**, and a **BepInEx 5** profile.
+
+Clone the repository, open PowerShell in its root and specify your own paths:
 
 ```powershell
-$repo = 'X:\projects\stonewards-disconnect-drops'
-$game = 'F:\Steam\steamapps\common\Stonewards'
-$profile = "$env:APPDATA\r2modmanPlus-local\Stonewards\profiles\stonewards-test"
+$gameDir = "C:\Games\Stonewards"
+$profileDir = "C:\ModManager\Stonewards\profiles\MyHostProfile"
 
-powershell -ExecutionPolicy Bypass -File "$repo\build-and-install.ps1" `
-    -GameDir $game -ProfileDir $profile
+powershell -ExecutionPolicy Bypass -File .\build-and-install.ps1 `
+    -GameDir $gameDir `
+    -ProfileDir $profileDir
 ```
 
-Build output: `StonewardsDisconnectDrops.dll`. Installed at:
+The script compiles `StonewardsDisconnectDrops.dll` and installs it into:
 
-`BepInEx/plugins/thereisnouser-DisconnectDrops/StonewardsDisconnectDrops.dll`
+`BepInEx/plugins/thereisnouser-DisconnectDrops/`
 
-After a successful build, the installer removes the earlier `LeaveTomeDrop` and `LeaveLootDrop` plugin DLLs from that profile.
+It also removes old pre-release **Leave Tome Drop / Leave Loot Drop** plugin DLLs from the selected profile after a successful build.
 
-## 🔧 Compatibility & known limitations
+## 🔧 Compatibility
 
-- **Unreleased prototype v0.1.0.** The previous iteration was built from analyzed Stonewards methods, but this rename itself has **not been compiled or tested in multiplayer**.
-- Items without a native `pickableItemPrefab` are deliberately retained in saved inventory rather than deleted.
-- Pickup spawning may not preserve slot-specific `fill` (charges/durability).
-- Team-wide tome effects may persist and stack if the dropped tome is picked up again.
-- Grabbed objects outside the inventory are not included.
-- When the host closes the session, ground drops cannot survive in the closed world.
+- **Game:** Stonewards. A supported game build range has not been established.
+- **Mod loader:** BepInEx 5 (Mono).
+- **Multiplayer:** Host-side mod; designed to require installation on the host only.
+- **Release status:** `0.1.0` — unreleased development version. Tome drops have been observed working; the expanded inventory-drop behavior still needs a complete multiplayer test.
+
+## ⚠️ Known limitations
+
+- **Unsupported inventory items** — items without a standard pickup prefab are kept in the saved inventory instead of being deleted.
+- **Item state** — special state such as charges or durability may not survive recreation as a world pickup.
+- **Team-wide upgrades** — effects granted by a tome may remain active after the player disconnects; collecting the dropped tome could apply them again.
+- **Other carried objects** — objects being carried outside the inventory system are not included.
+- **Closed sessions** — drops cannot remain in the world after the host ends the session.
 
 ## 🛠️ Development
 
-- Uses BepInEx 5, Harmony and Mirror; `netstandard2.1`.
-- Prefix on `StoneWardsNetworkManager.OnServerDisconnect`.
-- Tomes from `RunPlayerData.rogueUpgrades`, filtered to `UpgradeCategory.PICKUP`.
-- Inventory from `FirstPersonController.InventorySystem.InventoryEntries`; remove via `ServerRemoveItemFromSlot` after a successful server-side pickup spawn.
-- The code still needs local compilation and an in-game disconnect/kick test.
+### Implementation
 
-See [CHANGELOG.md](CHANGELOG.md).
+The mod uses **Harmony** to intercept `StoneWardsNetworkManager.OnServerDisconnect` before the disconnected player's object is removed. It runs only while the Mirror server is active.
+
+Tomes are selected from the player's saved `rogueUpgrades` with category `PICKUP`. Inventory entries are read from `InventorySystem`; supported items are spawned using the game's server-side pickup creation method, then removed from the original inventory to update save data. Failed drops are left in the saved state where possible.
+
+The `StonewardsDisconnectDrops.csproj` targets `netstandard2.1` and references assemblies from the local game and BepInEx installation. The build and installation commands are in the section above.
+
+## 🔗 Links
+
+[Report an issue](https://github.com/thereisnouser/stonewards-disconnect-drops/issues) · [Changelog](CHANGELOG.md)
+
+---
 
 *Made by thereisnouser*
