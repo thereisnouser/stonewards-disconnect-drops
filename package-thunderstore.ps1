@@ -86,7 +86,7 @@ if (Test-Path -LiteralPath $zipPath) {
 $zipStream = [IO.File]::Open($zipPath, [IO.FileMode]::CreateNew)
 $archive = $null
 try {
-    $archive = New-Object IO.Compression.ZipArchive(
+    $archive = [IO.Compression.ZipArchive]::new(
         $zipStream, [IO.Compression.ZipArchiveMode]::Create, $false
     )
     $files = [ordered]@{
